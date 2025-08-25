@@ -1,0 +1,71 @@
+"ResponseVariable","Moderator","MeanPEH","LowerCI","UpperCI"
+"Biodiversity","tree_type",3.98226534497307,0,37.6809144419485
+"Biodiversity","crop_type",4.06451937916241,0,29.5592291009112
+"Biodiversity","age_system",7.01208248985167,0,70.1389508418381
+"Biodiversity","season",6.60477622678372,0,62.4703278785108
+"Biodiversity","soil_texture",9.73769055848662,0,87.7140603599381
+"Biodiversity","no_tree_per_m",14.3891900086887,0,99.9943560712257
+"Biodiversity","tree_height",36.6299346108032,0,99.7483951201069
+"Biodiversity","alley_width",15.4177642675268,0,95.2143817015629
+"Biodiversity","organic",3.82173765755972,0,39.3947363380913
+"Biodiversity","tillage",6.22883849567253,0,85.0690806090747
+"Crop yield","tree_type",1.2078694432489,0,11.4047235921512
+"Crop yield","crop_type",1.45771516750902,0,11.0220221967443
+"Crop yield","age_system",0.982287591932289,0,12.780002319066
+"Crop yield","season",1.71913069329052,0,10.5663045063733
+"Crop yield","soil_texture",6.40807093918712,0,30.3714810715341
+"Crop yield","no_tree_per_m",2.53978758719981,0,17.6820756506041
+"Crop yield","tree_height",2.42728864885918,0,24.0641431483078
+"Crop yield","alley_width",5.74534508554503,0,34.5739342076922
+"Crop yield","organic",0.547413015808273,0,5.56958191317664
+"Crop yield","tillage",1.10404123248734,0,6.02679203914719
+"Water quality","tree_type",56.8820229463271,0,98.4113298864549
+"Water quality","crop_type",NA,NA,NA
+"Water quality","age_system",53.8452958228741,0,97.42056261777
+"Water quality","season",NA,NA,NA
+"Water quality","soil_texture",58.2739168429357,0,98.3643498851372
+"Water quality","no_tree_per_m",NA,NA,NA
+"Water quality","tree_height",NA,NA,NA
+"Water quality","alley_width",NA,NA,NA
+"Water quality","organic",NA,NA,NA
+"Water quality","tillage",NA,NA,NA
+"Pest and disease control","tree_type",38.1449896074581,0,84.093651318424
+"Pest and disease control","crop_type",13.1625087365903,0,86.3683101414929
+"Pest and disease control","age_system",23.6518133747012,0,92.4625740597079
+"Pest and disease control","season",4.62725546146406,0,43.6399369358183
+"Pest and disease control","soil_texture",41.3701854868827,0,97.0249054228171
+"Pest and disease control","no_tree_per_m",70.0245804230468,0,97.9331176422051
+"Pest and disease control","tree_height",NA,NA,NA
+"Pest and disease control","alley_width",8.27597412219819,0,46.0034822648126
+"Pest and disease control","organic",NA,NA,NA
+"Pest and disease control","tillage",NA,NA,NA
+"Soil quality","tree_type",27.0879760017961,0,99.9999247600282
+"Soil quality","crop_type",15.7354639833263,0,99.9947188577439
+"Soil quality","age_system",13.1137582621777,0,99.9994856526996
+"Soil quality","season",13.7064837540908,0,99.999926130788
+"Soil quality","soil_texture",17.1682427856846,0,99.9612323426885
+"Soil quality","no_tree_per_m",24.5833936970316,0,99.9994171774453
+"Soil quality","tree_height",36.3301677319356,0,99.999936772127
+"Soil quality","alley_width",29.7590330697382,0,99.9999788187175
+"Soil quality","organic",22.1428440483188,0,99.997175756553
+"Soil quality","tillage",11.4214215302246,0,99.9989797490067
+"Carbon sequestration","tree_type",1.69054863607274,0,19.7747974626713
+"Carbon sequestration","crop_type",15.8329926962139,0,100
+"Carbon sequestration","age_system",19.3701518598143,0,100
+"Carbon sequestration","season",NA,NA,NA
+"Carbon sequestration","soil_texture",35.2753404364642,0,100
+"Carbon sequestration","no_tree_per_m",NA,NA,NA
+"Carbon sequestration","tree_height",100,100,100
+"Carbon sequestration","alley_width",16.338876264007,0,100
+"Carbon sequestration","organic",1.89956657068124,0,21.6882794195162
+"Carbon sequestration","tillage",0.507656765155169,0,2.32832893551604
+"Product quality","tree_type",8.74830090546257,0,76.9046565298938
+"Product quality","crop_type",4.71415206489876,0,45.1048374487694
+"Product quality","age_system",6.9931648184748,0,62.2809483729564
+"Product quality","season",8.55365892226862,0,60.6350012092861
+"Product quality","soil_texture",37.8993138363942,0,95.4138146284626
+"Product quality","no_tree_per_m",19.1039011013692,0,87.0579444389707
+"Product quality","tree_height",6.4713808564668,0,63.0945811463561
+"Product quality","alley_width",31.2922431581172,0,94.3523953568191
+"Product quality","organic",NA,NA,NA
+"Product quality","tillage",NA,NA,NA

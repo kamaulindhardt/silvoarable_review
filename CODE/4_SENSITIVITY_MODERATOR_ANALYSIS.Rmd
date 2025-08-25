@@ -1021,7 +1021,7 @@ for (response in unique(meta_data$response_variable)) {
   response_specific_results[[response]] <- conduct_loo_analysis(data_subset, base_model, random_effects)
 }
 
-response_specific_results$Biodiversity |> str()
+# response_specific_results$Biodiversity |> str()
 ```
 
 
@@ -2399,7 +2399,9 @@ plan(multisession, workers = parallel::detectCores() - 1)
 
 
 moderators <- c("tree_type", "crop_type", "age_system", "season", 
-                "soil_texture", "no_tree_per_m", "tree_height", "alley_width")
+                "soil_texture", "no_tree_per_m", "tree_height", "alley_width"
+                #"organic", "tillage"
+                )
 
 ##########################################################################
 
@@ -2545,6 +2547,373 @@ cat("\nTotal time taken:", time.taken, units(time.taken), "\n")
 # Last go (20/8-2025)
 # Total time taken: 10.87276 mins 
 ```
+
+### Refactored bootstrap_peh() with rma.mv()
+
+```{r eval=FALSE}
+####################################################################################################
+# BOOTSTRAPPING FOR PROPORTION OF EXPLAINED HETEROGENEITY (PEH) ANALYSIS ------ Updated approach!
+####################################################################################################
+
+##########################################################################
+# Start time tracking
+start.time <- Sys.time()
+##########################################################################
+# Set up parallel processing
+plan(multisession, workers = parallel::detectCores() - 1)
+##########################################################################
+
+
+# Define moderators explicitly
+moderators <- c(
+  "tree_type", "crop_type", "age_system", "season", 
+  "soil_texture", "no_tree_per_m", "tree_height", "alley_width",
+  "organic", "tillage"
+)
+
+# Create named list of formula objects
+moderator_formulas <- setNames(
+  lapply(moderators, function(m) as.formula(paste("~ -1 +", m))),
+  moderators
+)
+
+# Control parameters for REML fitting
+control_params <- list(
+  optimizer = "optim",
+  method = "BFGS",
+  iter.max = 10000,
+  rel.tol = 1e-12
+)
+
+# Function to compute PEH for a single bootstrap draw
+bootstrap_peh_mv <- function(data_subset, v_matrix, moderator_formula) {
+  # Sample with replacement
+  boot_data <- data_subset[sample(nrow(data_subset), replace = TRUE), ]
+  
+  # Null model
+  null_model <- tryCatch({
+    rma.mv(
+      yi = yi,
+      V = v_matrix,
+      mods = ~ -1,
+      random = random_effects,
+      data = boot_data,
+      method = "REML",
+      control = control_params
+    )
+  }, error = function(e) NULL)
+  
+  if (is.null(null_model)) return(NA)
+  tau2_null <- sum(null_model$sigma2)
+  
+  # Moderator model
+  mod_model <- tryCatch({
+    rma.mv(
+      yi = yi,
+      V = v_matrix,
+      mods = moderator_formula,
+      random = random_effects,
+      data = boot_data,
+      method = "REML",
+      control = control_params
+    )
+  }, error = function(e) NULL)
+  
+  if (is.null(mod_model)) return(NA)
+  tau2_mod <- sum(mod_model$sigma2)
+  
+  # Compute PEH
+  peh <- ifelse(tau2_null > 0, ((tau2_null - tau2_mod) / tau2_null) * 100, NA)
+  peh <- max(min(peh, 100), 0)  # Constrain to [0, 100]
+  
+  return(peh)
+}
+
+##########################################################################
+# Bootstrapping for each response variable and moderator
+# Number of bootstrap iterations
+n_boot <- 100
+
+# Empty list to store results
+bootstrap_results <- list()
+
+# Loop over response variables and moderators
+for (response_variable in unique(meta_data$response_variable)) {
+  cat("\nBootstrapping:", response_variable, "\n")
+  
+  data_subset <- meta_data[meta_data$response_variable == response_variable, ]
+  v_matrix <- v_matrices[[response_variable]]
+  
+  if (is.null(v_matrix)) next
+  
+  for (moderator in names(moderator_formulas)) {
+    cat("  Moderator:", moderator, "\n")
+    
+    boot_estimates <- replicate(n_boot,
+      bootstrap_peh_mv(data_subset, v_matrix, moderator_formulas[[moderator]]))
+    
+    bootstrap_results[[paste(response_variable, moderator, sep = "_")]] <- data.frame(
+      ResponseVariable = response_variable,
+      Moderator = moderator,
+      MeanPEH = mean(boot_estimates, na.rm = TRUE),
+      LowerCI = quantile(boot_estimates, 0.025, na.rm = TRUE),
+      UpperCI = quantile(boot_estimates, 0.975, na.rm = TRUE)
+    )
+  }
+}
+
+# Combine into a single dataframe
+bootstrap_results_df <- bind_rows(bootstrap_results)
+
+##########################################################################
+# Save the bootstrapped results as an RDS file
+##########################################################################
+# Define the output directory
+output_dir <- here::here("DATA", "OUTPUT_FROM_R", "SAVED_OBJECTS_FROM_R")
+
+# Ensure the directory exists
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
+
+# File name prefix
+file_base <- "bootstrapped_PEH_results_updated_approach"
+
+# Save as RDS
+saveRDS(
+  bootstrap_results_df,
+  file = file.path(output_dir, paste0(file_base, ".rds"))
+)
+
+# Also save as CSV
+write.csv(
+  bootstrap_results_df,
+  file = file.path(output_dir, paste0(file_base, ".csv")),
+  row.names = FALSE
+)
+
+cat("Bootstrapped PEH results saved to:\n")
+cat("• RDS:", file.path(output_dir, paste0(file_base, ".rds")), "\n")
+cat("• CSV:", file.path(output_dir, paste0(file_base, ".csv")), "\n")
+
+##########################################################################
+# End time tracking
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+cat("\nTotal time taken:", time.taken, units(time.taken), "\n")
+##########################################################################
+# Last go (21/08-2025) 
+# Total time taken: 2.006638 hours
+```
+```{r}
+# Load the bootstrapped results - from the updated approach
+
+# Define the input path
+input_path <- here::here("DATA", "OUTPUT_FROM_R", "SAVED_OBJECTS_FROM_R", "bootstrapped_PEH_results_updated_approach.rds")
+
+# Load the object
+bootstrap_results_df_updated <- readRDS(input_path)
+##########################################################################
+# View results
+bootstrap_results_df_updated
+```
+
+```{r}
+# Filter AES of interest
+aes_to_keep <- c("Biodiversity", "Crop yield", "Soil quality")
+
+bootstrap_cleaned_updated <- bootstrap_results_df_updated %>%
+  filter(ResponseVariable %in% aes_to_keep) %>%
+  mutate(
+    Moderator = as.character(Moderator),
+    ResponseVariable = factor(ResponseVariable, levels = aes_to_keep)
+  ) %>%
+  group_by(ResponseVariable) %>%
+  mutate(
+    PEH_Sum = sum(MeanPEH, na.rm = TRUE),
+    MeanPEH_Normalized = MeanPEH / PEH_Sum * 100  # Normalize to relative % contribution
+  ) %>%
+  ungroup()
+
+bootstrap_cleaned_updated
+```
+
+
+### Visualise the refractored bootstrapped results as stacked bar plots
+
+```{r}
+# Define consistent, distinguishable colors for each moderator
+moderator_colors <- c(
+  "tree_type"      = "#F8766D", #*
+  "crop_type"      = "#00BA38", #*
+  "season"         = "#619CFF", #*
+  "alley_width"    = "#D89000", #*
+  "age_system"     = "#A3A500", #*
+  "tree_height"    = "#00BFC4", #*
+  "soil_texture"   = "#C77CFF",
+  "no_tree_per_m"  = "#FF61CC",
+  "organic"        = "#7CAE00",
+  "tillage"        = "#FFB000"
+)
+
+
+stacked_peh_plot <- ggplot(bootstrap_cleaned_updated, aes(
+  x = ResponseVariable,
+  y = MeanPEH_Normalized,
+  fill = Moderator
+)) +
+  geom_bar(stat = "identity", position = "stack", color = "black", alpha = 0.9) +
+  coord_flip() +
+  scale_fill_manual(values = moderator_colors, drop = FALSE) +
+  labs(
+    title = "Normalized Proportion of Explained Heterogeneity (PEH)",
+    y = "Relative Contribution (%)",
+    x = NULL,
+    fill = "Moderator"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "right"
+  )
+
+stacked_peh_plot
+```
+
+### Visualise the bootstrapped results as stacked bar plots with collapsed moderators (with Others)
+
+```{r}
+# Define main moderators (desired stacking order: bottom to top in horizontal plot)
+main_moderators <- c("tree_type", "crop_type", "season", "alley_width", "age_system", "tree_height")
+all_levels <- c(main_moderators, "Others")  # Desired order: Others LAST (top of stack)
+
+# Collapse others and reverse the stacking order
+peh_collapsed <- bootstrap_cleaned_updated %>%
+  mutate(
+    Moderator = ifelse(Moderator %in% main_moderators, Moderator, "Others"),
+    Moderator = factor(Moderator, levels = rev(all_levels))  # Reverse levels for stacking order
+  ) %>%
+  group_by(ResponseVariable, Moderator) %>%
+  summarise(
+    MeanPEH = sum(MeanPEH, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(ResponseVariable) %>%
+  mutate(
+    PEH_Sum = sum(MeanPEH, na.rm = TRUE),
+    MeanPEH_Normalized = MeanPEH / PEH_Sum * 100
+  ) %>%
+  ungroup()
+
+
+# Define custom colors (gray for Others)
+moderator_colors <- c(
+  "tree_type"    = "#F8766D",
+  "crop_type"    = "#00BA38",
+  "season"       = "#619CFF",
+  "alley_width"  = "#D89000",
+  "age_system"   = "#A3A500",
+  "tree_height"  = "#00BFC4",
+  "Others"       = "gray70"
+)
+
+# Generate the final plot
+stacked_peh_clean_plot <- ggplot(peh_collapsed, aes(
+  x = ResponseVariable,
+  y = MeanPEH_Normalized,
+  fill = Moderator
+)) +
+  geom_bar(stat = "identity", position = "stack", alpha = 0.95) +  # <- no color outline
+  coord_flip() +
+  scale_fill_manual(values = moderator_colors, drop = FALSE) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  labs(
+    title = "Normalized Proportion of Explained Heterogeneity (PEH)",
+    y = "Relative Contribution (%)",
+    x = "Agroecosystem Service (AES)",
+    fill = "Moderator"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "right"
+  )
+
+# Show plot
+stacked_peh_clean_plot
+```
+
+### Final PEH plot without the others category
+
+```{r}
+# Define main moderators (desired stacking order: bottom to top in horizontal plot)
+main_moderators <- c("tree_type", "crop_type", "season", "alley_width", "age_system", "tree_height")
+
+# Collapse others and reverse the stacking order
+peh_collapsed <- bootstrap_cleaned_updated %>%
+  mutate(
+    Moderator = ifelse(Moderator %in% main_moderators, Moderator, "Others"),
+    Moderator = factor(Moderator, levels = rev(c(main_moderators, "Others")))
+  ) %>%
+  group_by(ResponseVariable, Moderator) %>%
+  summarise(
+    MeanPEH = sum(MeanPEH, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(ResponseVariable) %>%
+  mutate(
+    PEH_Sum = sum(MeanPEH, na.rm = TRUE),
+    MeanPEH_Normalized = MeanPEH / PEH_Sum * 100
+  ) %>%
+  ungroup() %>%
+  filter(Moderator != "Others")  # <-- Remove Others from plotting
+
+# Define custom colors (exclude Others entirely)
+moderator_colors <- c(
+  "tree_type"    = "#F8766D",
+  "crop_type"    = "#00BA38",
+  "season"       = "#619CFF",
+  "alley_width"  = "#D89000",
+  "age_system"   = "#A3A500",
+  "tree_height"  = "#00BFC4"
+)
+
+# Generate the final plot
+stacked_peh_clean_plot <- ggplot(peh_collapsed, aes(
+  x = ResponseVariable,
+  y = MeanPEH_Normalized,
+  fill = Moderator
+)) +
+  geom_bar(stat = "identity", position = "stack", alpha = 0.95) +
+  coord_flip() +
+  scale_fill_manual(values = moderator_colors, drop = FALSE) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  labs(
+    title = "Normalized Proportion of Explained Heterogeneity (PEH)",
+    y = "Relative Contribution (%)",
+    x = NULL,
+    # x = "Agroecosystem Service (AES)",
+    fill = "Moderator"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "right"
+  ) + 
+  # Increase x-axis resolution
+  scale_y_continuous(breaks = seq(0, 100, 5))  # <-- 5% intervals
+
+# Show plot
+stacked_peh_clean_plot
+```
+
+
 
 ### Load the bootstrapped results
 
